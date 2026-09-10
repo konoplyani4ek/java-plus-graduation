@@ -1,0 +1,52 @@
+package ewm.request.server.handler;
+
+import ewm.request.server.exception.ConflictException;
+import ewm.request.server.exception.NotFoundException;
+import ewm.request.server.exception.ServiceUnavailableException;
+import ewm.request.server.exception.ValidationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiError> handleNotFound(NotFoundException e) {
+        log.warn("404: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiError(HttpStatus.NOT_FOUND.name(), "The required object was not found.", e.getMessage()));
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiError> handleServiceUnavailable(ServiceUnavailableException e) {
+        log.warn("503: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ApiError(HttpStatus.SERVICE_UNAVAILABLE.name(), "A required dependency is unavailable.", e.getMessage()));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiError> handleConflict(ConflictException e) {
+        log.warn("409: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiError(HttpStatus.CONFLICT.name(), "Integrity constraint has been violated.", e.getMessage()));
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiError> handleValidation(ValidationException e) {
+        log.warn("400: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiError(HttpStatus.BAD_REQUEST.name(), "Incorrectly made request.", e.getMessage()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleBadRequest(MethodArgumentNotValidException e) {
+        log.warn("400: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiError(HttpStatus.BAD_REQUEST.name(), "Incorrectly made request.", e.getMessage()));
+    }
+}
