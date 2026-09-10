@@ -40,7 +40,7 @@ services:
       - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
 
   stats-server:
-    build: stat/stat-server
+    build: stat/stats-server
     image: stat-server
     restart: on-failure
     ports:
