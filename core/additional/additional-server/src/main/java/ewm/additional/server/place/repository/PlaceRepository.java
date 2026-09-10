@@ -1,7 +1,0 @@
-package ewm.additional.server.place.repository;
-
-import ewm.additional.server.place.model.Place;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-public interface PlaceRepository extends JpaRepository<Place, Long> {
-}
