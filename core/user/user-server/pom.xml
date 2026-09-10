@@ -10,7 +10,7 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>user-server</artifactId>
+    <artifactId>user-service</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
