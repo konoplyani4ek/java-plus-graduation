@@ -9,7 +9,7 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>event-service</artifactId>
+    <artifactId>event</artifactId>
     <packaging>pom</packaging>
 
     <modules>
