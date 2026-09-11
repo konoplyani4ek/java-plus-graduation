@@ -27,9 +27,9 @@ import java.util.Set;
 public class Compilation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
-    Boolean pinned;
-    String title;
+    private Long id;
+    private Boolean pinned;
+    private String title;
 
     // Событие — в event-service, тут только id. Полные карточки для отображения
     // подтягиваются через EventClient.getSummaries(...) на уровне сервиса/маппера.

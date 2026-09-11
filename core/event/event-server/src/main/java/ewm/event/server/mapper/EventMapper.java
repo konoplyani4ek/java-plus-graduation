@@ -9,11 +9,11 @@ import ewm.event.server.dto.UpdateEventUserRequestDto;
 import ewm.event.server.model.Event;
 import ewm.place.dto.PlaceDto;
 import ewm.user.dto.UserShortDto;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EventMapper {
-
-    private EventMapper() {
-    }
 
     public static Event toEntity(NewEventDto dto, long initiatorId) {
         Event event = new Event();

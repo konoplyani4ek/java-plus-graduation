@@ -2,7 +2,10 @@ package ewm.event.server.mapper;
 
 import ewm.event.server.dto.LocationDto;
 import ewm.event.server.model.Location;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class LocationMapper {
 
     public static Location toLocation(LocationDto locationDto) {

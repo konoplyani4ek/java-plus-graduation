@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -56,6 +57,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         return eventDtoAssembler.toShortDtoList(events);
     }
 
+    @Transactional
     @Override
     public EventFullDto createEvent(long userId, NewEventDto dto) {
         log.info("Создание события для userId: {}, детали события: {}", userId, dto);
@@ -74,6 +76,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         return eventDtoAssembler.toFullDto(savedEvent);
     }
 
+    @Transactional
     @Override
     public EventFullDto updateEventOfUser(long userId, long eventId, UpdateEventUserRequestDto dto) {
         log.info("Обновление события для userId: {}, eventId: {}, детали обновления: {}", userId, eventId, dto);
@@ -131,6 +134,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         return requestGateway.updateStatus(eventId, internalDto);
     }
 
+    @Transactional
     @Override
     public EventFullDto setPlace(long userId, long eventId, long placeId) {
         log.info("Привязка события с id: {} к месту: {}", eventId, placeId);
@@ -146,6 +150,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         return eventDtoAssembler.toFullDto(eventRepository.save(event));
     }
 
+    @Transactional
     @Override
     public void removePlace(long userId, long eventId) {
         log.info("Отвязка места от события с id: {}", eventId);

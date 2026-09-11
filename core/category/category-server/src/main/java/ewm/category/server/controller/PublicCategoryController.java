@@ -18,8 +18,8 @@ public class PublicCategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public Collection<CategoryDto> getAll(@RequestParam(required = false, defaultValue = "0") Integer from,
-                                          @RequestParam(required = false, defaultValue = "10") Integer size) {
+    public Collection<CategoryDto> getAll(@RequestParam(defaultValue = "0") Integer from, // defaultValue уже подразумевает, что параметра может и не быть.
+                                          @RequestParam(defaultValue = "10") Integer size) {
         return categoryService.getAll(from, size);
     }
 

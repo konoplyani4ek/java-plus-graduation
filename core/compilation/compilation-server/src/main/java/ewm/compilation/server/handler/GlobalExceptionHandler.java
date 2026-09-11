@@ -6,6 +6,7 @@ import ewm.compilation.server.exception.DataIntegrityViolationException;
 import ewm.compilation.server.exception.NotFoundException;
 import ewm.compilation.server.exception.ServiceUnavailableException;
 import ewm.compilation.server.exception.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -21,11 +22,14 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ResponseEntity<ApiErrorDto> handleNotFound(final NotFoundException e) {
+        log.warn("404: {}", e.getMessage());
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.NOT_FOUND.name())
                 .reason("The required object was not found.")
@@ -38,6 +42,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServiceUnavailableException.class)
     public ResponseEntity<ApiErrorDto> handleServiceUnavailable(ServiceUnavailableException e) {
+        log.warn("503: {}", e.getMessage());
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.SERVICE_UNAVAILABLE.name())
                 .reason("A required dependency is unavailable.")
@@ -57,6 +63,8 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
+        log.warn("400: {}", errors);
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.BAD_REQUEST.name())
                 .reason("Incorrectly made request.")
@@ -75,6 +83,8 @@ public class GlobalExceptionHandler {
     })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ApiErrorDto> handleValidation(Exception e) {
+        log.warn("400: {}", e.getMessage());
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.BAD_REQUEST.name())
                 .reason("Incorrectly made request.")
@@ -87,6 +97,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiErrorDto> handleValidationException(Exception e) {
+        log.warn("400: {}", e.getMessage());
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.BAD_REQUEST.name())
                 .reason("Bad request")
@@ -99,6 +111,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorDto> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("409: {}", e.getMessage());
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.CONFLICT.name())
                 .reason("Integrity constraint has been violated.")
@@ -111,6 +125,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiErrorDto> handleConflict(ConflictException e) {
+        log.warn("409: {}", e.getMessage());
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.CONFLICT.name())
                 .reason("For the requested operation the conditions are not met.")
@@ -123,6 +139,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiErrorDto> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+        log.warn("405: {}", e.getMessage());
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.METHOD_NOT_ALLOWED.name())
                 .reason("The requested HTTP method is not supported for this endpoint.")
@@ -135,6 +153,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorDto> handleInternal(Exception e) {
+        log.error("500: непредвиденная ошибка", e);
+
         ApiErrorDto errorResponse = ApiErrorDto.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.name())
                 .reason("Internal unknown server error.")

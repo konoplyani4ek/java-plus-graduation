@@ -7,6 +7,7 @@ import ewm.place.server.model.Place;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,12 +16,14 @@ import java.util.List;
 public class PlaceServiceImpl implements PlaceService {
     private final PlaceRepository placeRepository;
 
+    @Transactional
     @Override
     public Place create(Place place) {
         place.setId(null);
         return placeRepository.save(place);
     }
 
+    @Transactional
     @Override
     public Place update(long placeId, Place place) {
         Place existing = getById(placeId);
@@ -32,6 +35,7 @@ public class PlaceServiceImpl implements PlaceService {
         return placeRepository.save(existing);
     }
 
+    @Transactional
     @Override
     public void delete(long placeId) {
         Place place = getById(placeId);

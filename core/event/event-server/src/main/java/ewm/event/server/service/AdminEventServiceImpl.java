@@ -19,6 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -61,6 +62,7 @@ public class AdminEventServiceImpl implements AdminEventService {
         return eventDtoAssembler.toFullDtoList(events);
     }
 
+    @Transactional
     @Override
     public EventFullDto updateEvent(Long eventId, UpdateEventAdminRequestDto request) {
         log.info("Обновление события с id: {}, запрос: {}", eventId, request);
@@ -111,6 +113,7 @@ public class AdminEventServiceImpl implements AdminEventService {
         return eventDtoAssembler.toFullDto(updatedEvent);
     }
 
+    @Transactional
     @Override
     public EventFullDto setPlace(long eventId, long placeId) {
         log.info("Привязка события с id: {} к месту: {}", eventId, placeId);
@@ -124,6 +127,7 @@ public class AdminEventServiceImpl implements AdminEventService {
         return eventDtoAssembler.toFullDto(eventRepository.save(event));
     }
 
+    @Transactional
     @Override
     public void removePlace(long eventId) {
         log.info("Отвязка места от события с id: {}", eventId);

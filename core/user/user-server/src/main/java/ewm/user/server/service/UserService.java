@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class UserService {
         return userRepository.findAll(pageable).getContent();
     }
 
+    @Transactional
     public User createUser(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new ConflictException("Такой email уже используется!");
@@ -42,6 +44,7 @@ public class UserService {
                 .orElseThrow(() -> new NotFoundException("Пользователь с id=" + id + " не найден"));
     }
 
+    @Transactional
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new NotFoundException("User с таким id не найден");
