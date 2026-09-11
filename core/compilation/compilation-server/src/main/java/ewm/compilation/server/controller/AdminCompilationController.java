@@ -1,4 +1,4 @@
-package java.ewm.compilation.server.controller;
+package ewm.compilation.server.controller;
 
 import ewm.compilation.server.service.CompilationService;
 import ewm.compilation.server.dto.CompilationDto;
