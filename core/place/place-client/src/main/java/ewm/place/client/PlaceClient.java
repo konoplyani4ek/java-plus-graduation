@@ -5,7 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "additional-service", contextId = "placeClient", path = "/internal/places")
+@FeignClient(name = "location-service", contextId = "placeClient", path = "/internal/places")
 public interface PlaceClient {
 
     @GetMapping("/{placeId}")

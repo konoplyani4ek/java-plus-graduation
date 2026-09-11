@@ -32,7 +32,11 @@ services:
         condition: service_healthy
       event-service:
         condition: service_healthy
-      additional-service:
+      category-service:
+        condition: service_healthy
+      compilation-service:
+        condition: service_healthy
+      location-service:
         condition: service_healthy
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
@@ -74,9 +78,9 @@ services:
       interval: 5s
       retries: 10
 
-  additional-service:
-    build: core/additional/additional-server
-    image: additional-service
+  category-service:
+    build: core/category/category-server
+    image: category-service
     restart: on-failure
     healthcheck:
       test: [ "CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8084' || exit 1" ]
@@ -85,7 +89,7 @@ services:
       retries: 30
       start_period: 10s
     depends_on:
-      additional-db:
+      category-db:
         condition: service_healthy
       discovery-server:
         condition: service_started
@@ -93,21 +97,101 @@ services:
         condition: service_started
     environment:
       - SERVER_PORT=8084
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://additional-db:5432/ewm-additional
-      - SPRING_DATASOURCE_USERNAME=additional
-      - SPRING_DATASOURCE_PASSWORD=additional
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://category-db:5432/ewm-category
+      - SPRING_DATASOURCE_USERNAME=category
+      - SPRING_DATASOURCE_PASSWORD=category
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
 
-  additional-db:
+  category-db:
     image: postgres:16.1
     ports:
       - "6546:5432"
     environment:
-      - POSTGRES_PASSWORD=additional
-      - POSTGRES_USER=additional
-      - POSTGRES_DB=ewm-additional
+      - POSTGRES_PASSWORD=category
+      - POSTGRES_USER=category
+      - POSTGRES_DB=ewm-category
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+  compilation-service:
+    build: core/compilation/compilation-server
+    image: compilation-service
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8085' || exit 1" ]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    depends_on:
+      compilation-db:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - SERVER_PORT=8085
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://compilation-db:5432/ewm-compilation
+      - SPRING_DATASOURCE_USERNAME=compilation
+      - SPRING_DATASOURCE_PASSWORD=compilation
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
+
+  compilation-db:
+    image: postgres:16.1
+    ports:
+      - "6547:5432"
+    environment:
+      - POSTGRES_PASSWORD=compilation
+      - POSTGRES_USER=compilation
+      - POSTGRES_DB=ewm-compilation
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+  location-service:
+    build: core/place/place-server
+    image: location-service
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8086' || exit 1" ]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    depends_on:
+      location-db:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - SERVER_PORT=8086
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://location-db:5432/ewm-location
+      - SPRING_DATASOURCE_USERNAME=location
+      - SPRING_DATASOURCE_PASSWORD=location
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
+
+  location-db:
+    image: postgres:16.1
+    ports:
+      - "6548:5432"
+    environment:
+      - POSTGRES_PASSWORD=location
+      - POSTGRES_USER=location
+      - POSTGRES_DB=ewm-location
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s

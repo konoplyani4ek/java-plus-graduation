@@ -131,7 +131,7 @@ public class EventDtoAssembler {
     }
 
     /**
-     * Аналогично — один батч-запрос к additional-service (категории) на весь список событий.
+     * Аналогично — один батч-запрос к category-service на весь список событий.
      */
     private Map<Long, CategoryDto> getCategoriesByCategoryId(List<Event> events) {
         if (events.isEmpty()) {

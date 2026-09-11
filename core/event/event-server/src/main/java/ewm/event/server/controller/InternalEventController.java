@@ -16,11 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Внутренний (межсервисный) контроллер — НЕ проксируется через Gateway.
- * Потребители: request-service (EventClient), additional-service (проверка категории,
- * отображение событий в подборках).
- */
 @RestController
 @RequestMapping("/internal/events")
 @RequiredArgsConstructor

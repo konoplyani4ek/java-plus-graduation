@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Шлюз к additional-service (места). Отдельный бин по той же причине, что и
+ * Шлюз к location-service. Отдельный бин по той же причине, что и
  * UserGateway/CategoryGateway — self-invocation ломает Resilience4j-аннотации.
  */
 @Slf4j
@@ -26,7 +26,7 @@ public class PlaceGateway {
 
     /**
      * Для отображения (EventFullDto.place) — поле необязательное, поэтому при
-     * недоступности additional-service просто не показываем место (null),
+     * недоступности location-service просто не показываем место (null),
      * а не роняем весь ответ и не выдумываем заглушку.
      */
     @CircuitBreaker(name = CB, fallbackMethod = "getFallback")
@@ -37,7 +37,7 @@ public class PlaceGateway {
 
     @SuppressWarnings("unused")
     private PlaceDto getFallback(long placeId, Throwable t) {
-        log.warn("additional-service недоступен при получении места {}: {}", placeId, t.toString());
+        log.warn("location-service недоступен при получении места {}: {}", placeId, t.toString());
         return null;
     }
 
@@ -61,7 +61,7 @@ public class PlaceGateway {
         if (t instanceof NotFoundException notFound) {
             throw notFound;
         }
-        log.warn("additional-service недоступен при получении места {} для поиска: {}", placeId, t.toString());
+        log.warn("location-service недоступен при получении места {} для поиска: {}", placeId, t.toString());
         throw new ServiceUnavailableException("Сервис мест временно недоступен, попробуйте позже");
     }
 
@@ -84,7 +84,7 @@ public class PlaceGateway {
         if (t instanceof NotFoundException notFound) {
             throw notFound;
         }
-        log.warn("additional-service недоступен при проверке места {}: {}", placeId, t.toString());
+        log.warn("location-service недоступен при проверке места {}: {}", placeId, t.toString());
         throw new ServiceUnavailableException("Сервис мест временно недоступен, попробуйте позже");
     }
 }

@@ -15,6 +15,7 @@
     <modules>
         <module>place-dto</module>
         <module>place-client</module>
+        <module>place-server</module>
     </modules>
 
     <dependencyManagement>

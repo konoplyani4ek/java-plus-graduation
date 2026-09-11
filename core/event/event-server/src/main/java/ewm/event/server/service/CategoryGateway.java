@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Шлюз к additional-service (категории). Отдельный бин по той же причине, что и
+ * Шлюз к category-service. Отдельный бин по той же причине, что и
  * UserGateway — self-invocation ломает работу аннотаций Resilience4j.
  */
 @Slf4j
@@ -30,7 +30,7 @@ public class CategoryGateway {
 
     /**
      * Для отображения (EventFullDto/EventShortDto.category) — при недоступности
-     * additional-service возвращаем заглушку, а не роняем весь ответ.
+     * category-service возвращаем заглушку, а не роняем весь ответ.
      */
     @CircuitBreaker(name = CB, fallbackMethod = "getFallback")
     @Retry(name = CB)
@@ -40,7 +40,7 @@ public class CategoryGateway {
 
     @SuppressWarnings("unused")
     private CategoryDto getFallback(long categoryId, Throwable t) {
-        log.warn("additional-service недоступен при получении категории {}: {}", categoryId, t.toString());
+        log.warn("category-service недоступен при получении категории {}: {}", categoryId, t.toString());
         return CategoryDto.builder().id(categoryId).name("Категория недоступна").build();
     }
 
@@ -59,7 +59,7 @@ public class CategoryGateway {
 
     @SuppressWarnings("unused")
     private Map<Long, CategoryDto> getMapFallback(List<Long> categoryIds, Throwable t) {
-        log.warn("additional-service недоступен при батч-получении категорий {}: {}", categoryIds, t.toString());
+        log.warn("category-service недоступен при батч-получении категорий {}: {}", categoryIds, t.toString());
         Map<Long, CategoryDto> result = new HashMap<>();
         for (Long id : categoryIds) {
             result.put(id, CategoryDto.builder().id(id).name("Категория недоступна").build());
@@ -86,7 +86,7 @@ public class CategoryGateway {
         if (t instanceof NotFoundException notFound) {
             throw notFound;
         }
-        log.warn("additional-service недоступен при проверке категории {}: {}", categoryId, t.toString());
+        log.warn("category-service недоступен при проверке категории {}: {}", categoryId, t.toString());
         throw new ServiceUnavailableException("Сервис категорий временно недоступен, попробуйте позже");
     }
 }

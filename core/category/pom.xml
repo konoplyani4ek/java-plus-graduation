@@ -15,6 +15,7 @@
     <modules>
         <module>category-dto</module>
         <module>category-client</module>
+        <module>category-server</module>
     </modules>
 
     <dependencyManagement>
