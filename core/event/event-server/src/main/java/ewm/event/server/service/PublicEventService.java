@@ -11,4 +11,8 @@ public interface PublicEventService {
     List<EventShortDto> getEvents(PublicEventSearchParam searchParam, PageParam pageParam);
 
     EventFullDto getEventById(Long id);
+
+    List<EventShortDto> getRecommendations(long userId, int maxResults);
+
+    void likeEvent(long userId, long eventId);
 }

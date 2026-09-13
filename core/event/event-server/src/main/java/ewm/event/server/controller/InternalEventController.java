@@ -57,7 +57,7 @@ public class InternalEventController {
                         .paid(dto.getPaid())
                         .categoryId(dto.getCategory() != null ? dto.getCategory().getId() : null)
                         .categoryName(dto.getCategory() != null ? dto.getCategory().getName() : null)
-                        .views(dto.getViews())
+                        .rating(dto.getRating())
                         .confirmedRequests(dto.getConfirmedRequests())
                         .build())
                 .toList();

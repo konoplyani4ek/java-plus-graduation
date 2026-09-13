@@ -19,6 +19,6 @@ public class EventSummaryDto {
     private Boolean paid;
     private Long categoryId;
     private String categoryName;
-    private Long views;
+    private Double rating;
     private Long confirmedRequests;
 }

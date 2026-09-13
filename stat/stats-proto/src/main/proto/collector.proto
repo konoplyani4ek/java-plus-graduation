@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package stats.service.collector;
+
+option java_package = "ewm.stats.proto";
+option java_multiple_files = true;
+
+import "google/protobuf/empty.proto";
+import "message.proto";
+
+// Принимает сообщения о действиях пользователей и кладёт их в Kafka.
+service UserActionController {
+  rpc CollectUserAction (stats.message.UserActionProto) returns (google.protobuf.Empty);
+}

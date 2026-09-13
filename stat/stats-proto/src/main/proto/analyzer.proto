@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package stats.service.dashboard;
+
+option java_package = "ewm.stats.proto";
+option java_multiple_files = true;
+
+import "message.proto";
+
+// Предоставляет рекомендации мероприятий на основе сходства мероприятий
+// и истории взаимодействия пользователей.
+service RecommendationsController {
+
+  // Список рекомендуемых мероприятий для указанного пользователя,
+  // основанный на предсказанной оценке.
+  rpc GetRecommendationsForUser (stats.message.UserPredictionsRequestProto)
+      returns (stream stats.message.RecommendedEventProto);
+
+  // Список мероприятий, похожих на указанное, с которыми пользователь
+  // ещё не взаимодействовал.
+  rpc GetSimilarEvents (stats.message.SimilarEventsRequestProto)
+      returns (stream stats.message.RecommendedEventProto);
+
+  // Сумма максимальных весов действий пользователей с указанными мероприятиями.
+  rpc GetInteractionsCount (stats.message.InteractionsCountRequestProto)
+      returns (stream stats.message.RecommendedEventProto);
+}

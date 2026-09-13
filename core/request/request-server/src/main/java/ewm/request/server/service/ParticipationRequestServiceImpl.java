@@ -12,11 +12,14 @@ import ewm.request.server.model.ParticipationRequest;
 import ewm.request.server.model.RequestStatus;
 import ewm.request.server.repository.EventConfirmedRequestsCount;
 import ewm.request.server.repository.ParticipationRequestRepository;
+import ewm.stat.client.grpc.CollectorClient;
+import ewm.stat.client.model.ActionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +37,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final ParticipationRequestRepository requestRepository;
     private final UserGateway userGateway;
     private final EventGateway eventGateway;
+    private final CollectorClient collectorClient;
 
     @Override
     public List<ParticipationRequestDto> getRequests(long userId) {
@@ -86,6 +90,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         ParticipationRequestDto result = ParticipationRequestMapper.toDto(requestRepository.save(request));
         log.info("Request created with id: {}", result.getId());
+        collectorClient.collectUserAction(userId, eventId, ActionType.REGISTER, Instant.now());
         return result;
     }
 

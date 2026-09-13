@@ -15,6 +15,101 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
 
+  kafka:
+    image: apache/kafka:3.7.1
+    container_name: kafka
+    ports:
+      - "9092:29092"
+    environment:
+      # single-node KRaft-кластер (без ZooKeeper); CLUSTER_ID не задаём —
+      # официальный образ генерирует и форматирует storage сам при первом старте
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  collector-service:
+    build: stat/collector
+    image: collector-service
+    restart: on-failure
+    depends_on:
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
+
+  aggregator-service:
+    build: stat/aggregator
+    image: aggregator-service
+    restart: on-failure
+    depends_on:
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
+
+  analyzer-service:
+    build: stat/analyzer
+    image: analyzer-service
+    restart: on-failure
+    depends_on:
+      analyzer-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://analyzer-db:5432/ewm-analyzer
+      - SPRING_DATASOURCE_USERNAME=analyzer
+      - SPRING_DATASOURCE_PASSWORD=analyzer
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
+      - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
+
+  analyzer-db:
+    image: postgres:16.1
+    ports:
+      - "6549:5432"
+    environment:
+      - POSTGRES_PASSWORD=analyzer
+      - POSTGRES_USER=analyzer
+      - POSTGRES_DB=ewm-analyzer
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
   gateway-server:
     build: infra/gateway-server
     image: gateway-server
@@ -303,7 +398,6 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
       - SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED=true
       - SPRING_CLOUD_CONFIG_DISCOVERY_SERVICE_ID=config-server
-      - STAT_SERVER_SERVICE_ID=stats-server
 
   event-db:
     image: postgres:16.1

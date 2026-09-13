@@ -5,14 +5,15 @@ import ewm.event.server.dto.EventFullDto;
 import ewm.event.server.dto.EventShortDto;
 import ewm.event.server.mapper.EventMapper;
 import ewm.event.server.model.Event;
-import ewm.event.server.stat.StatService;
 import ewm.place.dto.PlaceDto;
 import ewm.request.dto.EventConfirmedRequestsCountDto;
-import ewm.stat.client.model.GetStatsParams;
+import ewm.stat.client.grpc.AnalyzerClient;
+import ewm.stats.proto.RecommendedEventProto;
 import ewm.user.dto.UserShortDto;
+import io.grpc.StatusRuntimeException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -21,21 +22,21 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
+@Slf4j
 public class EventDtoAssembler {
-    private static final boolean UNIQUE_VIEWS = true;
 
-    private final StatService statService;
+    private final AnalyzerClient analyzerClient;
     private final RequestGateway requestGateway;
     private final UserGateway userGateway;
     private final CategoryGateway categoryGateway;
     private final PlaceGateway placeGateway;
 
-    public EventDtoAssembler(StatService statService,
+    public EventDtoAssembler(AnalyzerClient analyzerClient,
                              RequestGateway requestGateway,
                              UserGateway userGateway,
                              CategoryGateway categoryGateway,
                              PlaceGateway placeGateway) {
-        this.statService = statService;
+        this.analyzerClient = analyzerClient;
         this.requestGateway = requestGateway;
         this.userGateway = userGateway;
         this.categoryGateway = categoryGateway;
@@ -48,7 +49,7 @@ public class EventDtoAssembler {
 
         EventShortDto dto = EventMapper.toShortDto(event, category, initiator);
 
-        dto.setViews(getViews(event));
+        dto.setRating(getRating(event));
         dto.setConfirmedRequests(requestGateway.getConfirmedCount(event.getId()));
 
         return dto;
@@ -61,14 +62,14 @@ public class EventDtoAssembler {
 
         EventFullDto dto = EventMapper.toFullDto(event, category, initiator, place);
 
-        dto.setViews(getViews(event));
+        dto.setRating(getRating(event));
         dto.setConfirmedRequests(requestGateway.getConfirmedCount(event.getId()));
 
         return dto;
     }
 
     public List<EventShortDto> toShortDtoList(List<Event> events) {
-        Map<Long, Long> viewsByEventId = getViewsByEventId(events);
+        Map<Long, Double> ratingsByEventId = getRatingsByEventId(events);
         Map<Long, Long> confirmedRequestsByEventId = getConfirmedRequestsByEventId(events);
         Map<Long, UserShortDto> initiatorsByUserId = getInitiatorsByUserId(events);
         Map<Long, CategoryDto> categoriesByCategoryId = getCategoriesByCategoryId(events);
@@ -81,7 +82,7 @@ public class EventDtoAssembler {
                     categoriesByCategoryId.get(event.getCategoryId()),
                     initiatorsByUserId.get(event.getInitiatorId())
             );
-            dto.setViews(getViewsForEvent(event, viewsByEventId));
+            dto.setRating(getRatingForEvent(event, ratingsByEventId));
             dto.setConfirmedRequests(confirmedRequestsByEventId.getOrDefault(event.getId(), 0L));
             result.add(dto);
         }
@@ -90,7 +91,7 @@ public class EventDtoAssembler {
     }
 
     public List<EventFullDto> toFullDtoList(List<Event> events) {
-        Map<Long, Long> viewsByEventId = getViewsByEventId(events);
+        Map<Long, Double> ratingsByEventId = getRatingsByEventId(events);
         Map<Long, Long> confirmedRequestsByEventId = getConfirmedRequestsByEventId(events);
         Map<Long, UserShortDto> initiatorsByUserId = getInitiatorsByUserId(events);
         Map<Long, CategoryDto> categoriesByCategoryId = getCategoriesByCategoryId(events);
@@ -106,7 +107,7 @@ public class EventDtoAssembler {
                     initiatorsByUserId.get(event.getInitiatorId()),
                     place
             );
-            dto.setViews(getViewsForEvent(event, viewsByEventId));
+            dto.setRating(getRatingForEvent(event, ratingsByEventId));
             dto.setConfirmedRequests(confirmedRequestsByEventId.getOrDefault(event.getId(), 0L));
             result.add(dto);
         }
@@ -114,9 +115,6 @@ public class EventDtoAssembler {
         return result;
     }
 
-    /**
-     * Один запрос к user-service на весь список событий вместо N запросов (проблема N+1).
-     */
     private Map<Long, UserShortDto> getInitiatorsByUserId(List<Event> events) {
         if (events.isEmpty()) {
             return Map.of();
@@ -130,9 +128,6 @@ public class EventDtoAssembler {
         return userGateway.getShortMap(initiatorIds);
     }
 
-    /**
-     * Аналогично — один батч-запрос к category-service на весь список событий.
-     */
     private Map<Long, CategoryDto> getCategoriesByCategoryId(List<Event> events) {
         if (events.isEmpty()) {
             return Map.of();
@@ -163,67 +158,51 @@ public class EventDtoAssembler {
         return result;
     }
 
-    private Long getViews(Event event) {
+    private Double getRating(Event event) {
         if (event.getPublishedOn() == null) {
             return null;
         }
 
-        String uri = getEventUri(event);
-
-        GetStatsParams params = GetStatsParams.builder()
-                .start(event.getPublishedOn())
-                .end(LocalDateTime.now())
-                .uris(List.of(uri))
-                .unique(UNIQUE_VIEWS)
-                .build();
-
-        Map<String, Long> viewsByUri = statService.getViews(params);
-
-        if (viewsByUri == null) {
+        try {
+            return analyzerClient.getInteractionsCount(List.of(event.getId()))
+                    .findFirst()
+                    .map(RecommendedEventProto::getScore)
+                    .orElse(0.0);
+        } catch (StatusRuntimeException e) {
+            log.warn("Analyzer недоступен при расчёте рейтинга события {}: {}", event.getId(), e.getMessage());
             return null;
         }
-
-        return viewsByUri.getOrDefault(uri, 0L);
     }
 
-    private Map<Long, Long> getViewsByEventId(List<Event> events) {
-        List<Event> eventsWithPublishedOn = getEventsWithPublishedOn(events);
+    private Map<Long, Double> getRatingsByEventId(List<Event> events) {
+        List<Event> publishedEvents = getEventsWithPublishedOn(events);
 
-        if (eventsWithPublishedOn.isEmpty()) {
+        if (publishedEvents.isEmpty()) {
             return Map.of();
         }
 
-        GetStatsParams params = GetStatsParams.builder()
-                .start(getMinPublishedOn(eventsWithPublishedOn))
-                .end(LocalDateTime.now())
-                .uris(getEventUris(eventsWithPublishedOn))
-                .unique(UNIQUE_VIEWS)
-                .build();
+        List<Long> eventIds = getEventIds(publishedEvents);
 
-        Map<String, Long> viewsByUri = statService.getViews(params);
-
-        if (viewsByUri == null) {
+        try {
+            Map<Long, Double> ratings = new HashMap<>();
+            analyzerClient.getInteractionsCount(eventIds)
+                    .forEach(r -> ratings.put(r.getEventId(), r.getScore()));
+            return ratings;
+        } catch (StatusRuntimeException e) {
+            log.warn("Analyzer недоступен при батч-расчёте рейтинга событий {}: {}", eventIds, e.getMessage());
             return null;
         }
-
-        Map<Long, Long> viewsByEventId = new HashMap<>();
-
-        for (Event event : eventsWithPublishedOn) {
-            String uri = getEventUri(event);
-            Long views = viewsByUri.getOrDefault(uri, 0L);
-
-            viewsByEventId.put(event.getId(), views);
-        }
-
-        return viewsByEventId;
     }
 
-    private Long getViewsForEvent(Event event, Map<Long, Long> viewsByEventId) {
-        if (viewsByEventId == null) {
+    private Double getRatingForEvent(Event event, Map<Long, Double> ratingsByEventId) {
+        if (ratingsByEventId == null) {
+            return null;
+        }
+        if (event.getPublishedOn() == null) {
             return null;
         }
 
-        return viewsByEventId.get(event.getId());
+        return ratingsByEventId.getOrDefault(event.getId(), 0.0);
     }
 
     private List<Event> getEventsWithPublishedOn(List<Event> events) {
@@ -246,31 +225,5 @@ public class EventDtoAssembler {
         }
 
         return new ArrayList<>(uniqueIds);
-    }
-
-    private List<String> getEventUris(List<Event> events) {
-        Set<String> uniqueUris = new LinkedHashSet<>();
-
-        for (Event event : events) {
-            uniqueUris.add(getEventUri(event));
-        }
-
-        return new ArrayList<>(uniqueUris);
-    }
-
-    private LocalDateTime getMinPublishedOn(List<Event> events) {
-        LocalDateTime minPublishedOn = events.get(0).getPublishedOn();
-
-        for (Event event : events) {
-            if (event.getPublishedOn().isBefore(minPublishedOn)) {
-                minPublishedOn = event.getPublishedOn();
-            }
-        }
-
-        return minPublishedOn;
-    }
-
-    private String getEventUri(Event event) {
-        return "/events/" + event.getId();
     }
 }

@@ -15,7 +15,24 @@
         <module>stat-client</module>
         <module>stat-dto</module>
         <module>stats-server</module>
+        <module>stats-proto</module>
+        <module>stats-avro-schema</module>
+        <module>collector</module>
+        <module>aggregator</module>
+        <module>analyzer</module>
     </modules>
+
+    <properties>
+        <grpc.version>1.65.1</grpc.version>
+        <protobuf.version>3.25.3</protobuf.version>
+        <protobuf-plugin.version>0.6.1</protobuf-plugin.version>
+        <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
+        <avro.version>1.11.3</avro.version>
+        <grpc-spring-boot-starter.version>3.1.0.RELEASE</grpc-spring-boot-starter.version>
+        <!-- версия kafka-clients уже управляется spring-boot-starter-parent/spring-cloud-dependencies,
+             явно фиксируем на всякий случай, чтобы совпадала во всех сервисах -->
+        <kafka-clients.version>3.7.1</kafka-clients.version>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -28,6 +45,47 @@
                 <groupId>ru.practicum</groupId>
                 <artifactId>stat-client</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ru.practicum</groupId>
+                <artifactId>stats-proto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ru.practicum</groupId>
+                <artifactId>stats-avro-schema</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-client-spring-boot-starter</artifactId>
+                <version>${grpc-spring-boot-starter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-server-spring-boot-starter</artifactId>
+                <version>${grpc-spring-boot-starter.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>${avro.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${kafka-clients.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
