@@ -10,7 +10,6 @@ import ewm.request.dto.EventConfirmedRequestsCountDto;
 import ewm.stat.client.grpc.AnalyzerClient;
 import ewm.stats.proto.RecommendedEventProto;
 import ewm.user.dto.UserShortDto;
-import io.grpc.StatusRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -115,6 +114,9 @@ public class EventDtoAssembler {
         return result;
     }
 
+    /**
+     * Один запрос к user-service на весь список событий вместо N запросов (проблема N+1).
+     */
     private Map<Long, UserShortDto> getInitiatorsByUserId(List<Event> events) {
         if (events.isEmpty()) {
             return Map.of();
@@ -158,6 +160,11 @@ public class EventDtoAssembler {
         return result;
     }
 
+    /**
+     * Рейтинг мероприятия = сумма максимальных весов действий всех пользователей с ним
+     * (метод GetInteractionsCount сервиса Analyzer). Для ещё не опубликованных мероприятий
+     * взаимодействий быть не может — рейтинг не запрашиваем, возвращаем null.
+     */
     private Double getRating(Event event) {
         if (event.getPublishedOn() == null) {
             return null;
@@ -168,7 +175,7 @@ public class EventDtoAssembler {
                     .findFirst()
                     .map(RecommendedEventProto::getScore)
                     .orElse(0.0);
-        } catch (StatusRuntimeException e) {
+        } catch (Exception e) {
             log.warn("Analyzer недоступен при расчёте рейтинга события {}: {}", event.getId(), e.getMessage());
             return null;
         }
@@ -188,7 +195,7 @@ public class EventDtoAssembler {
             analyzerClient.getInteractionsCount(eventIds)
                     .forEach(r -> ratings.put(r.getEventId(), r.getScore()));
             return ratings;
-        } catch (StatusRuntimeException e) {
+        } catch (Exception e) {
             log.warn("Analyzer недоступен при батч-расчёте рейтинга событий {}: {}", eventIds, e.getMessage());
             return null;
         }
