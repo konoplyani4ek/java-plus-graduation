@@ -21,13 +21,27 @@ public interface UserActionRepository extends JpaRepository<UserActionEntity, Lo
     @Query("SELECT ua.eventId FROM UserActionEntity ua WHERE ua.userId = :userId")
     Set<Long> findEventIdsByUserId(@Param("userId") Long userId);
 
+    @Query("SELECT ua.eventId FROM UserActionEntity ua WHERE ua.userId = :userId AND ua.eventId IN :eventIds")
+    Set<Long> findEventIdsByUserIdAndEventIdIn(@Param("userId") Long userId, @Param("eventIds") List<Long> eventIds);
+
     @Query("SELECT ua.eventId as eventId, SUM(ua.weight) as totalWeight "
             + "FROM UserActionEntity ua WHERE ua.eventId IN :eventIds GROUP BY ua.eventId")
     List<EventWeightSum> sumWeightsByEventIds(@Param("eventIds") List<Long> eventIds);
+
+    @Query("SELECT ua.eventId as eventId, ua.weight as weight "
+            + "FROM UserActionEntity ua WHERE ua.userId = :userId AND ua.eventId IN :eventIds")
+    List<EventWeight> findWeightsByUserIdAndEventIdIn(@Param("userId") Long userId,
+                                                      @Param("eventIds") List<Long> eventIds);
 
     interface EventWeightSum {
         Long getEventId();
 
         Double getTotalWeight();
+    }
+
+    interface EventWeight {
+        Long getEventId();
+
+        Double getWeight();
     }
 }
