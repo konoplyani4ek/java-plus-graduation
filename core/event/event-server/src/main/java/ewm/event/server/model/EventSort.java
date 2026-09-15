@@ -4,7 +4,7 @@ import ewm.event.server.exception.ValidationException;
 
 public enum EventSort {
     EVENT_DATE,
-    VIEWS;
+    RATING;
 
     public static EventSort parse(String value) {
         try {

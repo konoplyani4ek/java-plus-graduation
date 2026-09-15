@@ -12,6 +12,10 @@ import ewm.event.server.model.EventState;
 import ewm.event.server.repository.EventRepository;
 import ewm.event.server.repository.EventSpecifications;
 import ewm.place.dto.PlaceDto;
+import ewm.stat.client.grpc.AnalyzerClient;
+import ewm.stat.client.grpc.CollectorClient;
+import ewm.stat.client.model.ActionType;
+import ewm.stats.proto.RecommendedEventProto;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -20,9 +24,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -31,6 +39,9 @@ public class PublicEventServiceImpl implements PublicEventService {
     private final EventRepository eventRepository;
     private final EventDtoAssembler eventDtoAssembler;
     private final PlaceGateway placeGateway;
+    private final AnalyzerClient analyzerClient;
+    private final CollectorClient collectorClient;
+    private final RequestGateway requestGateway;
 
     @Override
     public List<EventShortDto> getEvents(PublicEventSearchParam searchParam, PageParam pageParam) {
@@ -66,8 +77,8 @@ public class PublicEventServiceImpl implements PublicEventService {
 
         EventSort eventSort = EventSort.parse(searchParam.getSort());
 
-        if (eventSort == EventSort.VIEWS) {
-            return getEventsSortedByViews(specification, pageParam);
+        if (eventSort == EventSort.RATING) {
+            return getEventsSortedByRating(specification, pageParam);
         }
 
         return getEventsSortedByEventDate(specification, pageParam);
@@ -88,24 +99,24 @@ public class PublicEventServiceImpl implements PublicEventService {
         return eventDtoAssembler.toShortDtoList(events);
     }
 
-    private List<EventShortDto> getEventsSortedByViews(Specification<Event> specification,
-                                                       PageParam pageParam) {
+    private List<EventShortDto> getEventsSortedByRating(Specification<Event> specification,
+                                                        PageParam pageParam) {
         List<Event> events = eventRepository.findAll(specification);
-        log.info("Найдено {} событий для сортировки по просмотрам.", events.size());
+        log.info("Найдено {} событий для сортировки по рейтингу.", events.size());
 
         List<EventShortDto> dtos = eventDtoAssembler.toShortDtoList(events);
 
         return dtos.stream()
-                .sorted(viewsComparator())
+                .sorted(ratingComparator())
                 .skip(pageParam.getFrom())
                 .limit(pageParam.getSize())
                 .toList();
     }
 
-    private Comparator<EventShortDto> viewsComparator() {
+    private Comparator<EventShortDto> ratingComparator() {
         return Comparator
                 .comparing(
-                        EventShortDto::getViews,
+                        EventShortDto::getRating,
                         Comparator.nullsLast(Comparator.reverseOrder())
                 )
                 .thenComparing(EventShortDto::getId);
@@ -118,5 +129,51 @@ public class PublicEventServiceImpl implements PublicEventService {
                 .orElseThrow(() -> new NotFoundException("Событие с id: " + id + " не найдено или недоступно"));
 
         return eventDtoAssembler.toFullDto(event);
+    }
+
+    @Override
+    public List<EventShortDto> getRecommendations(long userId, int maxResults) {
+        List<RecommendedEventProto> recommendations = analyzerClient
+                .getRecommendationsForUser(userId, maxResults)
+                .toList();
+
+        if (recommendations.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> orderedIds = recommendations.stream()
+                .map(RecommendedEventProto::getEventId)
+                .toList();
+
+        Map<Long, Event> publishedEventsById = eventRepository.findAllById(orderedIds).stream()
+                .filter(event -> event.getState() == EventState.PUBLISHED)
+                .collect(Collectors.toMap(Event::getId, event -> event));
+
+        List<Event> orderedEvents = orderedIds.stream()
+                .map(publishedEventsById::get)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return eventDtoAssembler.toShortDtoList(orderedEvents);
+    }
+
+    @Override
+    public void likeEvent(long userId, long eventId) {
+        Event event = eventRepository.findOneByIdAndState(eventId, EventState.PUBLISHED)
+                .orElseThrow(() -> new NotFoundException(
+                        "Событие с id: " + eventId + " не найдено или недоступно"));
+
+        boolean attended = requestGateway.getRequestsForEvent(event.getId()).stream()
+                .anyMatch(request -> request.getRequester() != null
+                        && request.getRequester() == userId
+                        && "CONFIRMED".equals(request.getStatus()));
+
+        if (!attended) {
+            throw new ValidationException(
+                    "Пользователь " + userId + " не может лайкать мероприятие " + eventId
+                            + " - нет подтверждённой заявки на участие в нём");
+        }
+
+        collectorClient.collectUserAction(userId, eventId, ActionType.LIKE, Instant.now());
     }
 }
